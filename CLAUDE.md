@@ -10,6 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 pip install git+https://github.com/lamm-mit/PRefLexOR.git
 
 # Install for development (editable installation)
+git clone https://github.com/lamm-mit/PRefLexOR.git
+cd PRefLexOR
 pip install -r requirements.txt
 pip install -e .
 
@@ -17,18 +19,26 @@ pip install -e .
 MAX_JOBS=4 pip install flash-attn --no-build-isolation
 ```
 
-### Python Package Management
+### Running Applications
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Launch business application suite (Financial Risk, Medical Diagnosis, etc.)
+./launch_apps.sh
 
-# Install package in development mode
-pip install -e .
+# Run individual Streamlit apps
+cd financialrisk && streamlit run app.py --server.port 8501
+cd medical_diagnosis && streamlit run app.py --server.port 8502
+# ... etc for other apps
+```
+
+### Testing Commands
+```bash
+# Test Ollama connection (required for business apps)
+python financialrisk/test_ollama.py
+
+# No formal test suite exists - consider adding pytest framework
 ```
 
 ## Architecture Overview
-
-### Core Components
 
 **PRefLexOR** is a framework for preference-based recursive language modeling that combines:
 - **ORPO (Odds Ratio Preference Optimization)** - Phase I training
@@ -37,50 +47,63 @@ pip install -e .
 - **Active Learning** - Dynamic dataset generation during training
 - **Recursive Reasoning** - Iterative self-improvement through reflection
 
-### Key Modules
+### Core Package Structure
+```
+PRefLexOR/
+├── active_trainer.py    # ORPO/DPO trainers with dynamic dataset generation
+├── inference.py         # Recursive reasoning with thinking tokens
+└── utils.py            # RAG utilities, OpenAI integration, token extraction
+```
 
-#### `/PRefLexOR/active_trainer.py`
-- `PRefLexORORPOTrainer` - ORPO-based trainer for Phase I (Structured Thought Integration)
-- `PRefLexORDPOTrainer` - DPO-based trainer for Phase II (Independent Reasoning Development)
-- Handles dynamic dataset generation, thinking token processing, and preference optimization
+### Business Applications
+Separate Streamlit applications demonstrate PRefLexOR in various domains:
+- `financialrisk/` - Financial risk assessment
+- `medical_diagnosis/` - Medical diagnosis support
+- `supply_chain/` - Supply chain risk management
+- `legal_analysis/` - Legal document analysis
+- `investment_research/` - Investment research
+- `product_development/` - Product development strategy
 
-#### `/PRefLexOR/inference.py`
-- `recursive_response_from_thinking()` - Core recursive reasoning algorithm
-- Implements iterative self-improvement using thinking tokens
-- Supports model-critic feedback loops for response refinement
+Each app requires Ollama running locally with `llama3.1:8b-instruct-q4_K_M` model.
 
-#### `/PRefLexOR/utils.py`
-- Vector index retrieval utilities using LlamaIndex
-- OpenAI API integration for dataset generation
-- Text extraction utilities for thinking tokens
-- RAG (Retrieval-Augmented Generation) support
+### Training Workflow
 
-### Training Phases
+1. **Phase I - ORPO Training**: Uses `PRefLexORORPOTrainer` for structured thought integration
+2. **Phase II - DPO Training**: Uses `PRefLexORDPOTrainer` for independent reasoning development
+3. **Recursive Inference**: `recursive_response_from_thinking()` implements iterative refinement
 
-1. **Phase I - ORPO Training**: Structured thought integration using preference optimization
-2. **Phase II - DPO Training**: Independent reasoning development with rejection sampling
-3. **Recursive Algorithm**: Self-improving reasoning through thinking-reflection cycles
+### Key Classes and Functions
+
+#### `PRefLexOR/active_trainer.py`
+- `PRefLexORORPOTrainer`: Extends TRL's ORPOTrainer with dynamic dataset generation
+- `PRefLexORDPOTrainer`: Extends TRL's DPOTrainer with thinking token support
+- Both trainers support on-the-fly dataset generation and RAG integration
+
+#### `PRefLexOR/inference.py`
+- `recursive_response_from_thinking()`: Core algorithm for recursive reasoning
+- `generate_local_model()`: Local model inference with thinking token support
+- Supports model-critic feedback loops
+
+#### `PRefLexOR/utils.py`
+- `generate_GPT_MistralRS()`: Dataset generation using OpenAI API
+- `extract_text_*()`: Functions to extract thinking/reflection sections
+- RAG utilities for context retrieval
 
 ### Special Tokens
-- `<|thinking|>...<|/thinking|>` - Marks explicit reasoning sections
-- `<|reflect|>...<|/reflect|>` - Marks reflection sections (used in recursive inference)
+- `<|thinking|>...<|/thinking|>` - Explicit reasoning sections
+- `<|reflect|>...<|/reflect|>` - Reflection sections for recursive improvement
 
 ### Model Integration
-- Built on HuggingFace Transformers
-- Supports LoRA/PEFT for efficient fine-tuning
-- Compatible with various base models (focuses on materials science applications)
-- Pre-trained models available on HuggingFace Hub under `lamm-mit/` organization
+- HuggingFace Transformers base
+- LoRA/PEFT support for efficient fine-tuning
+- Pre-trained models: `lamm-mit/PRefLexOR_*` on HuggingFace Hub
+- Flash Attention 2 support for performance
 
 ### Key Dependencies
 - `torch` - PyTorch framework
-- `transformers` - HuggingFace transformers
-- `trl` - Transformer Reinforcement Learning library
+- `transformers>=4.45` - HuggingFace transformers
+- `trl` - Transformer Reinforcement Learning
 - `peft` - Parameter Efficient Fine-Tuning
 - `llama-index-*` - RAG and vector indexing
-- `openai` - GPT model integration for dataset generation
-
-### Notebooks and Examples
-- Training notebooks demonstrate Phase I and Phase II training loops
-- Inference notebooks show recursive reasoning capabilities
-- Graph visualization tools for knowledge network analysis
-- Colab examples available for immediate experimentation
+- `openai` - Dataset generation
+- `accelerate`, `bitsandbytes` - Training optimization
